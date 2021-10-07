@@ -1,0 +1,2 @@
+Download model from https://drive.google.com/uc?id=1NeMdIoKQ55ZW0ST2sABucbkbjUV171Go 
+to folder model\unet_64f_2conv_10c

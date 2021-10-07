@@ -1,0 +1,6 @@
+You also need to install GDAL and rasterio libraries
+if you have a problem with installing:
+FIRST: use environment with no russian letters in path
+SECOND: go to site https://www.lfd.uci.edu/~gohlke/pythonlibs/ and download rasterio and GDAL '.whl' files for your version python and os.
+Then use "pip install path_to_file/GDAL-your-version-.whl" and
+	 "pip install path_to_file/rasterio-your-version-.whl"
