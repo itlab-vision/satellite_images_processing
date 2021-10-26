@@ -2,7 +2,7 @@ from keras.models import Model
 from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Conv2DTranspose, BatchNormalization,\
     Activation, Dropout
 import keras
-
+import numpy as np
 
 class CloudNet():
     def __init__(self, path):
@@ -11,8 +11,24 @@ class CloudNet():
         self.model.load_weights(path)
 
     def process(self, image):
-        # process single image
-        pass
+        # Input: numpy array (image) of shape (384, 384, 4) width x height x channels
+        # channels: Red (band 4), Green (band 3), Blue (band 2), and Near Infrared (band 5)
+        if isinstance(image, list):
+            res = []
+            for img in image:
+                t = self.model.predict(np.array([img]), batch_size=None)
+                t = np.array(t * 255, dtype=np.uint8)
+                t = t[0, :, :, 0]
+                res.append(t)
+        elif isinstance(image, np.ndarray):
+            res = self.model.predict(np.array([image]), batch_size=None)
+            res = np.array(res * 255, dtype=np.uint8)
+            res = res[0, :, :, 0]
+        else:
+            raise ValueError(
+                "image must be a numpy array or list of numpy arrays")
+        # Output: numpy array (mask) of shape (384, 384) width x height
+        return res
 
     def bn_relu(self, input_tensor):
         """It adds a Batch_normalization layer before a Relu
