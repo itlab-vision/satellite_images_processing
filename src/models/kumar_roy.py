@@ -13,6 +13,7 @@ class KumarRoy64_10():
         self.th_fire = th_fire
 
     def process(self, image):
+        # Input: numpy array (image) of shape (256, 256, 10) width x height x channels
         if isinstance(image, list):
             res = []
             for img in image:
@@ -27,6 +28,7 @@ class KumarRoy64_10():
         else:
             raise ValueError(
                 "image must be a numpy array or list of numpy arrays")
+        # Output: numpy array (mask) of shape (256, 256) width x height
         return res
 
     def conv2d_block(self, input_tensor, n_filters, kernel_size=3, batchnorm=True):

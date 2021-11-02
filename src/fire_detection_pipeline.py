@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 images_path = os.path.abspath('') + '/image.tif'
 
 image = rasterio.open(images_path).read().transpose((1, 2, 0))
-MAX_PIXEL_VALUE = 65535
+MAX_PIXEL_VALUE = 65535 #maximum gray level in landsat 8 images
 image = np.float32(image)/MAX_PIXEL_VALUE
 
 model_path = os.path.abspath('') + '/model.h5'
