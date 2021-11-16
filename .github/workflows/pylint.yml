@@ -17,6 +17,9 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
+        sudo apt-add-repository ppa:ubuntugis/ubuntugis-unstable
+        sudo apt-get update
+        sudo apt-get install gdal-bin libgdal-dev
         pip install -r requirements.txt
         cd src
         pylint `ls -R|grep .py$|xargs`
