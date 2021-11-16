@@ -21,5 +21,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        cd src
-        pylint `ls -R|grep .py$|xargs`  --errors-only --extension-pkg-whitelist=cv2,PyQt5,numpy --generated-members=cv2.*,PyQt5.*,numpy.*;
+        pylint src --errors-only --disable=F0401 --extension-pkg-whitelist=cv2,PyQt5,numpy --generated-members=cv2.*,PyQt5.*,numpy.*
