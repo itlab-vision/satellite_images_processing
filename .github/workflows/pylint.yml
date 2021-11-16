@@ -22,4 +22,4 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         cd src
-        pylint `ls -R|grep .py$|xargs`
+        pylint `ls -R|grep .py$|xargs`  --errors-only --extension-pkg-whitelist=cv2,PyQt5,numpy --generated-members=cv2.*,PyQt5.*,numpy.*;
