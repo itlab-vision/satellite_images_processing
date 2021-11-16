@@ -13,7 +13,8 @@ MAX_PIXEL_VALUE = 65535  # maximum gray level in landsat 8 images
 # готовое 4 - канальное изображение
 images_path = os.path.abspath('') + '/image.tif'
 image = imread(images_path)
-image = resize(image, (384, 384), preserve_range=True, mode='symmetric') # нужно только в общем случае
+# нужно только в общем случае
+image = resize(image, (384, 384), preserve_range=True, mode='symmetric')
 
 
 # не готовое изображение
@@ -26,7 +27,8 @@ image = resize(image, (384, 384), preserve_range=True, mode='symmetric') # ну�
 #image_nir = imread(images_path + '/test_nir/'+ 'nir_'+image_ends)
 
 #image = np.stack((image_red, image_green, image_blue, image_nir), axis=-1)
-#image = resize(image, (384, 384), preserve_range=True, mode='symmetric') # нужно только в общем случае
+# нужно только в общем случае
+#image = resize(image, (384, 384), preserve_range=True, mode='symmetric')
 #image /= MAX_PIXEL_VALUE
 
 #import tifffile as tiff
