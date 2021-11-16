@@ -6,3 +6,4 @@ rasterio==1.2.9
 gdal==3.3.3
 tensorflow==2.6.0
 keras==2.6.0
+typing-extensions==3.10
