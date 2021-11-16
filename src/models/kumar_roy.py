@@ -18,8 +18,8 @@ class KumarRoy64_10():
             res = []
             for img in image:
                 t = self.model.predict(np.array([img]), batch_size=None)
-                t = res[0, :, :, 0] > self.th_fire
-                t = np.array(res * 255, dtype=np.uint8)
+                t = t[0, :, :, 0] > self.th_fire
+                t = np.array(t * 255, dtype=np.uint8)
                 res.append(t)
         elif isinstance(image, np.ndarray):
             res = self.model.predict(np.array([image]), batch_size=None)
