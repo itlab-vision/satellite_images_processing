@@ -2,6 +2,7 @@ import os
 import numpy as np
 import cv2 as cv
 from models.cloud_net import CloudNet
+from visualizers.display_rgb import DisplayAsRGB
 from skimage.io import imread
 from skimage.transform import resize
 from matplotlib import pyplot as plt
@@ -37,12 +38,9 @@ image = resize(image, (384, 384), preserve_range=True, mode='symmetric') # ну�
 model = CloudNet(model_path)
 result = model.process(image)
 
-# visualise (костыль)
-fig, (a, b) = plt.subplots(1,2, figsize=(12,8))
-src = image[:,:, 0:3]
-a.imshow(src)
-b.imshow(result)
-plt.show()
+# visualise
+displayer = DisplayAsRGB()
+displayer.show([image, np.expand_dims(result, 2)])
 
 # save (костыль)
 cv.imwrite('res_model.png', cv.cvtColor(result, cv.COLOR_RGB2BGR))
