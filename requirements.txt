@@ -3,6 +3,6 @@ opencv-python==4.5.3.56
 scikit-image==0.18.3
 matplotlib==3.4.3
 rasterio==1.2.9
-gdal==3.3.2
+gdal==3.3.3
 tensorflow==2.6.0
 keras==2.6.0
