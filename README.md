@@ -8,3 +8,4 @@ Modules:
 2) Module for processing data using AI methods (in progress)
 3) Model of high-level analysis of data processing results (in future)
 4) Data visualization module (in future)
+adadad
