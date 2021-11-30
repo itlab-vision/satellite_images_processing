@@ -1,11 +1,11 @@
 import sys  # sys нужен для передачи argv в QApplication
 from PyQt5 import QtWidgets
 import design  # Это наш конвертированный файл дизайна
-from design import *
+from design import QtGui
 
 # Костыль
-from models.kumar_roy import *
-from models.cloud_net import *
+from models.kumar_roy import KumarRoy64_10
+from models.cloud_net import CloudNet
 from skimage.io import imread
 from skimage.transform import resize
 import qimage2ndarray
