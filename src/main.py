@@ -1,7 +1,8 @@
 import sys  # sys нужен для передачи argv в QApplication
-from PyQt5 import QtWidgets
+import os
 import design  # Это наш конвертированный файл дизайна
-from design import QtGui
+import functools
+from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets, QtWebChannel
 
 # Костыль
 from models.kumar_roy import KumarRoy64_10
@@ -11,7 +12,6 @@ from skimage.transform import resize
 import qimage2ndarray
 import numpy as np
 import cv2 as cv
-
 
 class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
@@ -32,6 +32,27 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.models.append(self.cloud)
 
         # Map
+        # Для отображения координат центра (потом уберу)
+        self.label = QtWidgets.QLabel()
+        sp = QtWidgets.QSizePolicy()
+        sp.setVerticalStretch(0)
+        self.label.setSizePolicy(sp)
+        self.gridLayout_2.addWidget(self.label)
+
+        # подключаем карту
+        self.view = QtWebEngineWidgets.QWebEngineView()
+        self.channel = QtWebChannel.QWebChannel()
+        self.channel.registerObject("SatelliteApp", self)
+        # python object for html
+        # example: self.view.page().runJavaScript("map.panTo(L.latLng({}, {}));".format(lat, lng))
+        self.view.page().setWebChannel(self.channel)
+
+        file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "assets/map.html",
+        )
+        self.view.setUrl(QtCore.QUrl.fromLocalFile(file))
+        self.gridLayout_2.addWidget(self.view)
 
         # Map Properties
 
@@ -47,6 +68,10 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.labels.append(self.label_cloud)
 
     # Map
+
+    @QtCore.pyqtSlot(float, float)
+    def onMapMove(self, lat, lng):
+        self.label.setText("Lng: {:.5f}, Lat: {:.5f}".format(lng, lat))
 
     # Map Properties
 
