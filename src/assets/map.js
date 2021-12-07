@@ -1,6 +1,9 @@
 var map;
+var marker_1;
+var marker_2;
+var num = 0;
 
-function initialize(){
+function initialize() {
     map = L.map('map').setView([56.29827, 43.98141], 16);
 
     L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -8,15 +11,25 @@ function initialize(){
         maxZoom: 18
     }).addTo(map);
 
-    var marker = L.marker(map.getCenter()).addTo(map);
-    marker.bindPopup("Hello World!").openPopup();
-    
     new QWebChannel(qt.webChannelTransport, function (channel) {
-        window.SatelliteApp = channel.objects.SatelliteApp;
-        if(typeof SatelliteApp != 'undefined') {
-            var onMapMove = function() { SatelliteApp.onMapMove(map.getCenter().lat, map.getCenter().lng) };
+        SatelliteApp = channel.objects.SatelliteApp;
+        if (typeof SatelliteApp != 'undefined') {
+            var onMapMove = function () { SatelliteApp.onMapMove(map.getCenter().lat, map.getCenter().lng) };
+            var onMapClick = function (e) {
+                SatelliteApp.addMarker(e.latlng.lat, e.latlng.lng, function (pyval) {
+                    num = pyval;
+                    if (num == 1) {
+                        marker_1 = L.marker(e.latlng).addTo(map);
+                    } else if (num == 2) {
+                        marker_2 = L.marker(e.latlng).addTo(map);
+                    } else {
+                        alert("Too many markers");
+                    }
+                });
+            }
             map.on('move', onMapMove);
             onMapMove();
+            map.on('click', onMapClick)
         }
     });
 }

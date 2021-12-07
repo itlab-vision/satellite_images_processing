@@ -13,6 +13,7 @@ import qimage2ndarray
 import numpy as np
 import cv2 as cv
 
+
 class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
     models = []
@@ -39,12 +40,9 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.label.setSizePolicy(sp)
         self.gridLayout_2.addWidget(self.label)
 
-        # подключаем карту
         self.view = QtWebEngineWidgets.QWebEngineView()
         self.channel = QtWebChannel.QWebChannel()
         self.channel.registerObject("SatelliteApp", self)
-        # python object for html
-        # example: self.view.page().runJavaScript("map.panTo(L.latLng({}, {}));".format(lat, lng))
         self.view.page().setWebChannel(self.channel)
 
         file = os.path.join(
@@ -53,8 +51,14 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         )
         self.view.setUrl(QtCore.QUrl.fromLocalFile(file))
         self.gridLayout_2.addWidget(self.view)
+        self.num_markers = 0
+        self.markers = [(), ()]
 
         # Map Properties
+
+        self.button_preview.clicked.connect(self.preview_mode)
+        self.button_date.clicked.connect(self.choose_date)
+        self.button_clear.clicked.connect(self.clear_markers)
 
         # Buttons
 
@@ -73,7 +77,28 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def onMapMove(self, lat, lng):
         self.label.setText("Lng: {:.5f}, Lat: {:.5f}".format(lng, lat))
 
+    @QtCore.pyqtSlot(float, float, result=int)
+    def addMarker(self, lat, lng):
+        if self.num_markers == 2:
+            return 0
+        self.num_markers += 1
+        self.markers[self.num_markers-1] = (lat, lng)
+        return self.num_markers
+
     # Map Properties
+
+    def preview_mode(self):
+        pass
+
+    def choose_date(self):
+        pass
+
+    def clear_markers(self):
+        self.num_markers = 0
+        self.markers[0] = (None, None)
+        self.markers[1] = (None, None)
+        self.view.page().runJavaScript("map.removeLayer(marker_1);")
+        self.view.page().runJavaScript("map.removeLayer(marker_2);")
 
     # Buttons
 
