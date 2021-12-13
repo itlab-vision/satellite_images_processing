@@ -1,34 +1,34 @@
-import sys  # sys нужен для передачи argv в QApplication
+import sys
 import os
-import design  # Это наш конвертированный файл дизайна
 import functools
-from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets, QtWebChannel
-
-# Костыль
-from models.kumar_roy import KumarRoy64_10
-from models.cloud_net import CloudNet
-from skimage.io import imread
-from skimage.transform import resize
 import qimage2ndarray
+import design  # Это наш конвертированный файл дизайна
 import numpy as np
 import cv2 as cv
+
+from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets, QtWebChannel
+from models.kumar_roy import KumarRoy64_10
+from models.cloud_net import CloudNet
+
+# Костыль
+from skimage.io import imread
 
 
 class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
     models = []
     labels = []
+    runs = 0
 
     def __init__(self):
         super().__init__()
-        self.setupUi(self)  # Это нужно для инициализации нашего дизайна
-        # Это здесь нужно для доступа к переменным, методам
-        # и т.д. в файле design.py
+        self.setupUi(self)
 
         # Models initialize
         # Костыль
         self.fire = KumarRoy64_10('C://Users//Никита//Desktop//fire//model.h5')
         self.cloud = CloudNet('C://Users//Никита//Desktop//cloud//model.h5')
+
         self.models.append(self.fire)
         self.models.append(self.cloud)
 
@@ -67,7 +67,7 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.button_exit.clicked.connect(self.exit)
 
         # Results
-        # Костыль
+
         self.labels.append(self.label_fire)
         self.labels.append(self.label_cloud)
 
@@ -84,6 +84,11 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.num_markers += 1
         self.markers[self.num_markers-1] = (lat, lng)
         return self.num_markers
+
+    def norm_markers(self, x, y):
+        left_up = (min(x[0], y[0]), min(x[1], y[1]))
+        right_down = (max(x[0], y[0]), max(x[1], y[1]))
+        return left_up, right_down
 
     # Map Properties
 
@@ -103,37 +108,29 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     # Buttons
 
     def analyze(self):
-        # запускаем модели и заполняем pixmap
-        # соответствующих label
+        if self.num_markers != 2:
+            self.view.page().runJavaScript("alert_markers();")
+            return
+        # координаты левого верхнего и правого нижнего угла изображения
+        x, y = self.norm_markers(self.markers[0], self.markers[1])
         # Костыль
-        images = []
-        # это разные image!
         image = imread('C://Users//Никита//Desktop//fire//image.tif')
-        print(image.shape)
-        images.append(image)
-        image = imread('C://Users//Никита//Desktop//cloud//image.tif')
-        images.append(image)
 
         i = 0
         for model in self.models:
-            res = model.process(images[i])
+            res = model.process(image)
             res = qimage2ndarray.array2qimage(res)
             self.labels[i].setPixmap(QtGui.QPixmap.fromImage(res))
             i += 1
 
-        return
-
     def save(self):
-        # берем из каждой label в results of models pixmap
-        # конвертим в np.ndarray и сохраняем
-        # Костыль
         i = 0
         for label in self.labels:
             image = qimage2ndarray.rgb_view(label.pixmap().toImage())
-            cv.imwrite('res_model_{}.png'.format(i), cv.cvtColor(image, cv.COLOR_RGB2BGR))
+            cv.imwrite('res_model_{}_{}.png'.format(i, self.runs),
+                       cv.cvtColor(image, cv.COLOR_RGB2BGR))
             i += 1
-
-        return
+        self.runs += 1
 
     def exit(self):
         reply = QtWidgets.QMessageBox.question(self, 'Message', 'Are you sure to exit?',
@@ -141,7 +138,6 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                                                QtWidgets.QMessageBox.No)
         if reply == QtWidgets.QMessageBox.Yes:
             self.close()
-        return
 
     # Results
 

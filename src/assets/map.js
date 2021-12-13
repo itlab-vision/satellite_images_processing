@@ -3,6 +3,10 @@ var marker_1;
 var marker_2;
 var num = 0;
 
+function alert_markers() {
+    alert("Use 2 markers to define area to analyze")
+}
+
 function initialize() {
     map = L.map('map').setView([56.29827, 43.98141], 16);
 
