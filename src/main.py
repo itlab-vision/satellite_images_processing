@@ -15,7 +15,15 @@ from skimage.io import imread
 
 
 class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
-
+    # from earth explorer site https://ers.cr.usgs.gov
+    username = None
+    password = None
+    # date - string
+    year = None
+    month = None
+    day = None
+    # loaded/choosen tiff image
+    image = None 
     models = []
     labels = []
     runs = 0
@@ -33,12 +41,6 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.models.append(self.cloud)
 
         # Map
-        # Для отображения координат центра (потом уберу)
-        self.label = QtWidgets.QLabel()
-        sp = QtWidgets.QSizePolicy()
-        sp.setVerticalStretch(0)
-        self.label.setSizePolicy(sp)
-        self.gridLayout_2.addWidget(self.label)
 
         self.view = QtWebEngineWidgets.QWebEngineView()
         self.channel = QtWebChannel.QWebChannel()
@@ -56,6 +58,8 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         # Map Properties
 
+        self.preview = QtWidgets.QLabel()
+        self.ispreview = False
         self.button_preview.clicked.connect(self.preview_mode)
         self.button_date.clicked.connect(self.choose_date)
         self.button_clear.clicked.connect(self.clear_markers)
@@ -93,10 +97,29 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     # Map Properties
 
     def preview_mode(self):
-        pass
+        # debug
+        return
+        if self.ispreview:
+            self.button_preview.setText('Preview mode')
+            # remove web channel from self.view.page() ?
+
+            self.gridLayout_2.removeWidget(self.view)
+            # convert self.image/loaded tif to self.preview pixmap
+            
+            self.gridLayout_2.addWidget(self.preview)
+            self.ispreview = False
+        else:
+            self.button_preview.setText('Map mode')
+            self.gridLayout_2.removeWidget(self.preview)
+            # set web channel to self.view.page() ?
+
+            self.gridLayout_2.addWidget(self.view)
+            self.ispreview = True
 
     def choose_date(self):
-        pass
+        # debug
+        return
+        # create new form/message_box to choose year, month and day as listbox/input_text/something
 
     def clear_markers(self):
         self.num_markers = 0
@@ -111,14 +134,17 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         if self.num_markers != 2:
             self.view.page().runJavaScript("alert_markers();")
             return
-        # координаты левого верхнего и правого нижнего угла изображения
+        # координаты левого верхнего и правого нижнего угла изображения (lat, lng)
         x, y = self.norm_markers(self.markers[0], self.markers[1])
+        # найти нужное изображение
+        # загрузить на комп
+        # прочитать с компа в self.image
         # Костыль
-        image = imread('C://Users//Никита//Desktop//fire//image.tif')
+        self.image = imread('C://Users//Никита//Desktop//fire//image.tif')
 
         i = 0
         for model in self.models:
-            res = model.process(image)
+            res = model.process(self.image)
             res = qimage2ndarray.array2qimage(res)
             self.labels[i].setPixmap(QtGui.QPixmap.fromImage(res))
             i += 1
@@ -126,9 +152,9 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def save(self):
         i = 0
         for label in self.labels:
-            image = qimage2ndarray.rgb_view(label.pixmap().toImage())
+            img = qimage2ndarray.rgb_view(label.pixmap().toImage())
             cv.imwrite('res_model_{}_{}.png'.format(i, self.runs),
-                       cv.cvtColor(image, cv.COLOR_RGB2BGR))
+                       cv.cvtColor(img, cv.COLOR_RGB2BGR))
             i += 1
         self.runs += 1
 
