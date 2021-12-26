@@ -6,7 +6,10 @@ import design  # Это наш конвертированный файл диз�
 import numpy as np
 import cv2 as cv
 
-from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets, QtWebChannel
+from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWebChannel
+from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QLabel, QFormLayout, QMainWindow, QMessageBox, QApplication
+from landsatxplore.api import API
+from landsatxplore.earthexplorer import EarthExplorer
 from models.kumar_roy import KumarRoy64_10
 from models.cloud_net import CloudNet
 
@@ -14,16 +17,43 @@ from models.cloud_net import CloudNet
 from skimage.io import imread
 
 
-class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
+class SignIn(QDialog):
+    def __init__(self):
+        super(SignIn, self).__init__()
+
+        self.login = QLineEdit(self)
+        self.password = QLineEdit(self)
+        buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        label = QLabel(self)
+        label.setText(
+            "To use this application in on-line mode please enter yours login and password from earth explorer https://ers.cr.usgs.gov")
+
+        layout = QFormLayout(self)
+        layout.addWidget(label)
+        layout.addRow("Login", self.login)
+        layout.addRow("Password", self.password)
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def getLP(self):
+        return self.login.text(), self.password.text()
+
+
+class SatelliteApp(QMainWindow, design.Ui_MainWindow):
+    api = None
+    ee = None
     # from earth explorer site https://ers.cr.usgs.gov
-    username = None
-    password = None
+    username = ''
+    password = ''
     # date - string
     year = None
     month = None
     day = None
     # loaded/choosen tiff image
-    image = None 
+    image = None
     models = []
     labels = []
     runs = 0
@@ -58,7 +88,7 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         # Map Properties
 
-        self.preview = QtWidgets.QLabel()
+        self.preview = QLabel(self)
         self.ispreview = False
         self.button_preview.clicked.connect(self.preview_mode)
         self.button_date.clicked.connect(self.choose_date)
@@ -75,11 +105,11 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.labels.append(self.label_fire)
         self.labels.append(self.label_cloud)
 
-    # Map
+        # Sign In
 
-    @QtCore.pyqtSlot(float, float)
-    def onMapMove(self, lat, lng):
-        self.label.setText("Lng: {:.5f}, Lat: {:.5f}".format(lng, lat))
+        self.sign_in = SignIn()
+
+    # Map
 
     @QtCore.pyqtSlot(float, float, result=int)
     def addMarker(self, lat, lng):
@@ -99,13 +129,15 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def preview_mode(self):
         # debug
         return
+        if self.image == None:
+            return
         if self.ispreview:
             self.button_preview.setText('Preview mode')
             # remove web channel from self.view.page() ?
 
             self.gridLayout_2.removeWidget(self.view)
             # convert self.image/loaded tif to self.preview pixmap
-            
+
             self.gridLayout_2.addWidget(self.preview)
             self.ispreview = False
         else:
@@ -119,7 +151,7 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def choose_date(self):
         # debug
         return
-        # create new form/message_box to choose year, month and day as listbox/input_text/something
+        # create new form/dialog to choose year, month and day as listbox/input_text/something
 
     def clear_markers(self):
         self.num_markers = 0
@@ -134,10 +166,23 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         if self.num_markers != 2:
             self.view.page().runJavaScript("alert_markers();")
             return
+        if not self.authorize():
+            return
         # координаты левого верхнего и правого нижнего угла изображения (lat, lng)
         x, y = self.norm_markers(self.markers[0], self.markers[1])
         # найти нужное изображение
+        scenes = self.api.search(
+            dataset='landsat_8_c1',
+            latitude=(y[0]+x[0])/2,
+            longitude=(y[1]+x[1])/2,
+            bbox=(x[0], x[1], y[0], y[1]),
+            start_date='2021-01-01',
+            end_date='2021-03-01',
+            max_cloud_cover=10  # hz how much is needed
+        )
         # загрузить на комп
+        #self.ee.download(
+            #identifier=scenes[0]['display_id'], output_dir='./downloaded')
         # прочитать с компа в self.image
         # Костыль
         self.image = imread('C://Users//Никита//Desktop//fire//image.tif')
@@ -159,17 +204,31 @@ class SatelliteApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.runs += 1
 
     def exit(self):
-        reply = QtWidgets.QMessageBox.question(self, 'Message', 'Are you sure to exit?',
-                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-                                               QtWidgets.QMessageBox.No)
-        if reply == QtWidgets.QMessageBox.Yes:
+        reply = QMessageBox.question(self, 'Message', 'Are you sure to exit?',
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.ee.logout()
+            self.api.logout()
             self.close()
 
     # Results
 
+    # Sign In
+
+    def authorize(self):
+        self.sign_in.exec_()
+        self.username, self.password = self.sign_in.getLP()
+        if self.username == '' or self.password == '':
+            return False
+        # добавить try catch блок
+        self.api = API(self.username, self.password)
+        self.ee = EarthExplorer(self.username, self.password)
+        return True
+
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     window = SatelliteApp()
     window.show()
     app.exec_()

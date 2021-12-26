@@ -18,7 +18,6 @@ function initialize() {
     new QWebChannel(qt.webChannelTransport, function (channel) {
         SatelliteApp = channel.objects.SatelliteApp;
         if (typeof SatelliteApp != 'undefined') {
-            var onMapMove = function () { SatelliteApp.onMapMove(map.getCenter().lat, map.getCenter().lng) };
             var onMapClick = function (e) {
                 SatelliteApp.addMarker(e.latlng.lat, e.latlng.lng, function (pyval) {
                     num = pyval;
@@ -31,8 +30,6 @@ function initialize() {
                     }
                 });
             }
-            map.on('move', onMapMove);
-            onMapMove();
             map.on('click', onMapClick)
         }
     });
