@@ -5,6 +5,7 @@ import qimage2ndarray
 import design  # Это наш конвертированный файл дизайна
 import numpy as np
 import cv2 as cv
+import tarfile
 
 from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWebChannel
 from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QLabel, QFormLayout, QMainWindow, QMessageBox, QApplication
@@ -15,6 +16,7 @@ from models.cloud_net import CloudNet
 
 # Костыль
 from skimage.io import imread
+from skimage.transform import resize
 
 
 class SignIn(QDialog):
@@ -181,9 +183,31 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             max_cloud_cover=10  # hz how much is needed
         )
         # загрузить на комп
-        #self.ee.download(
-            #identifier=scenes[0]['display_id'], output_dir='./downloaded')
+        # self.ee.download(
+            # identifier=scenes[0]['display_id'], output_dir='./downloaded')
         # прочитать с компа в self.image
+        image_name = scenes[0]['display_id']
+        # Костыль
+        images_path = 'C:\\mygit\\ITLab\\satellite_images_processing\\src\\downloaded\\'
+        images = []
+        size = None
+        ''' закомменчу пока, так как работает долговато
+        tar = tarfile.open(images_path+image_name+'.tar.gz', 'r')
+
+        for i in range(10):
+            tar.extract(image_name + '_B{}.TIF'.format(i+1), images_path+image_name)
+            image = imread(images_path+image_name + '\\' +
+                           image_name + '_B{}.TIF'.format(i+1))
+            if(i == 0):
+                size = image.shape
+            # ландсат выдает снимки разного размера
+            image = resize(image, size, preserve_range=True, mode='symmetric')
+            # предобработать картинки к рабочему формату
+
+            images.append(image)
+        '''
+        # self.image = np.stack((images[0], images[1], images[2], images[3], images[4],
+            # images[5], images[6], images[7], images[8], images[9]), axis=-1)
         # Костыль
         self.image = imread('C://Users//Никита//Desktop//fire//image.tif')
 
@@ -217,13 +241,14 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
     # Sign In
 
     def authorize(self):
-        self.sign_in.exec_()
-        self.username, self.password = self.sign_in.getLP()
         if self.username == '' or self.password == '':
-            return False
-        # добавить try catch блок
-        self.api = API(self.username, self.password)
-        self.ee = EarthExplorer(self.username, self.password)
+            self.sign_in.exec_()
+            self.username, self.password = self.sign_in.getLP()
+            if self.username == '' or self.password == '':
+                return False
+            # добавить try catch блок
+            self.api = API(self.username, self.password)
+            self.ee = EarthExplorer(self.username, self.password)
         return True
 
 
