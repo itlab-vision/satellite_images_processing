@@ -129,17 +129,17 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
     # Map Properties
 
     def preview_mode(self):
-        # debug
-        return
-        if self.image == None:
+        if self.image is None:
             return
         if self.ispreview:
             self.button_preview.setText('Preview mode')
             # remove web channel from self.view.page() ?
-
+            # не работает так как надо, хмм...
             self.gridLayout_2.removeWidget(self.view)
-            # convert self.image/loaded tif to self.preview pixmap
-
+            # работает только на тестовом изображении для fire detection!!!!!
+            convert = np.concatenate((self.image[:,:,7:8],self.image[:,:,6:7],self.image[:,:,2:3]), axis = 2)
+            convert = qimage2ndarray.array2qimage(convert)
+            self.preview.setPixmap(QtGui.QPixmap.fromImage(convert))
             self.gridLayout_2.addWidget(self.preview)
             self.ispreview = False
         else:
