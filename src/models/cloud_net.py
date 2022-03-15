@@ -3,6 +3,8 @@ from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Conv2DTranspo
     Activation, Dropout
 import keras
 import numpy as np
+import cv2 as cv
+
 
 class CloudNet():
     def __init__(self, path):
@@ -10,18 +12,29 @@ class CloudNet():
             input_rows=384, input_cols=384, num_of_channels=4, num_of_classes=1)
         self.model.load_weights(path)
 
+    def preprocess(self, image):
+        if image.shape[2] < 4:
+            raise ValueError("num of image channels must be more than 3")
+        img = cv.resize(image, (384, 384), interpolation=cv.INTER_AREA)
+        if image.shape[2] > 4:
+            img = np.concatenate(
+                (img[:, :, 3:4], img[:, :, 2:3], img[:, :, 1:2], img[:, :, 4:5]), axis=2)
+        return img
+
     def process(self, image):
         # Input: numpy array (image) of shape (384, 384, 4) width x height x channels
         # channels: Red (band 4), Green (band 3), Blue (band 2), and Near Infrared (band 5)
         if isinstance(image, list):
             res = []
             for img in image:
-                t = self.model.predict(np.array([img]), batch_size=None)
+                t = self.preprocess(img)
+                t = self.model.predict(np.array([t]), batch_size=None)
                 t = np.array(t * 255, dtype=np.uint8)
                 t = t[0, :, :, 0]
                 res.append(t)
         elif isinstance(image, np.ndarray):
-            res = self.model.predict(np.array([image]), batch_size=None)
+            res = self.preprocess(image)
+            res = self.model.predict(np.array([res]), batch_size=None)
             res = np.array(res * 255, dtype=np.uint8)
             res = res[0, :, :, 0]
         else:
