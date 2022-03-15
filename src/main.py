@@ -171,13 +171,14 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         if not self.authorize():
             return
         # координаты левого верхнего и правого нижнего угла изображения (lat, lng)
-        x, y = self.norm_markers(self.markers[0], self.markers[1])
+        upleft, lowright = self.norm_markers(self.markers[0], self.markers[1])
+        # TODO заюзать нормальный код из landsat_demo (сделать отдельный класс?)
         # найти нужное изображение
         scenes = self.api.search(
             dataset='landsat_8_c1',
-            latitude=(y[0]+x[0])/2,
-            longitude=(y[1]+x[1])/2,
-            bbox=(x[0], x[1], y[0], y[1]),
+            #latitude=(lowright[0]+upleft[0])/2,
+            #longitude=(lowright[1]+upleft[1])/2,
+            bbox=(upleft[0], upleft[1], lowright[0], lowright[1]),
             start_date='2021-01-01',
             end_date='2021-03-01',
             max_cloud_cover=10  # hz how much is needed
