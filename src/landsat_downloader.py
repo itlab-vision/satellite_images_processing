@@ -94,7 +94,7 @@ def main():
             try:
                 ee.download(identifier=scene, output_dir=scenes_path, dataset='landsat_8_c1')
                 tar = tarfile.open(scenes_path+scene+'.tar.gz', 'r')
-                tar.extractall(path=scenes_path[:-5]+scene, members=tar.getmembers()[0:10])
+                tar.extractall(path=scenes_path[:-5]+scene)
             except EarthExplorerError as e:
                 print(e, end='')
                 print(' for ' + scene + ' from dataset landsat_8_c1')
