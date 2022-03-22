@@ -45,7 +45,7 @@ class SignIn(QDialog):
 # TODO finish choosing date
 class Date(QDialog):
     def __init__(self, start, end):
-        super(SignIn, self).__init__()
+        super(Date, self).__init__()
 
         # does it need to store?
         self.start = ''
