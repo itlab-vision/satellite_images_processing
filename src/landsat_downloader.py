@@ -23,7 +23,7 @@ def build_argparser():
     args.add_argument('-lon', '--longitude', type=float, required=False,
                       help='Longitude of a point to observe.')
     args.add_argument('-b', '--bbox', type=str, required=False,
-                      help='Area to observe in format "(xmin ymin xmax ymax)" where "x" - lattitude, "y" - longitude')
+                      help='Area to observe in format "(xmin ymin xmax ymax)" where "x" - longitude, "y" - lattitude')
     args.add_argument('-s', '--start', type=str, required=False,
                       help='Start date in format YYYY-MM-DD.')
     args.add_argument('-e', '--end', type=str, required=False,

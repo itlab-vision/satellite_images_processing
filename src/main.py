@@ -10,7 +10,7 @@ import numpy as np
 import cv2 as cv
 
 from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWebChannel
-from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QLabel, QFormLayout, QMainWindow, QMessageBox, QApplication
+from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QLabel, QFormLayout, QGridLayout, QMainWindow, QMessageBox, QApplication
 from landsatxplore.api import API
 from landsatxplore.errors import EarthExplorerError
 from landsatxplore.earthexplorer import EarthExplorer
@@ -24,11 +24,14 @@ class SignIn(QDialog):
 
         self.login = QLineEdit(self)
         self.password = QLineEdit(self)
+        self.resize(660, 100)
+        self.setWindowTitle('Authorization')
+
         buttonBox = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
         label = QLabel(self)
         label.setText(
-            "To use this application in on-line mode please enter yours login and password from earth explorer https://ers.cr.usgs.gov")
+            "To use this application in online mode please enter yours login and password from earth explorer https://ers.cr.usgs.gov")
 
         layout = QFormLayout(self)
         layout.addWidget(label)
@@ -42,39 +45,38 @@ class SignIn(QDialog):
     def getLP(self):
         return self.login.text(), self.password.text()
 
-# TODO finish choosing date
+
 class Date(QDialog):
     def __init__(self, start, end):
         super(Date, self).__init__()
-
-        # does it need to store?
-        self.start = ''
-        self.end = ''
-        if start:
-            self.start = start
-        if end:
-            self.end = end
-
-        # listbox???
-        self.start_date = None
-        self.end_date = None
-
+        self.setWindowTitle('Time period')
         buttonBox = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
-        label = QLabel(self)
-        label.setText("Choose start and end date")
 
-        layout = QFormLayout(self)
-        layout.addWidget(label)
-        # add dates
-        layout.addWidget(buttonBox)
+        label_s = QLabel(self)
+        label_s.setText('Enter start date in format: YYYY-MM-DD')
+        label_e = QLabel(self)
+        label_e.setText('Enter end date in format: YYYY-MM-DD')
+
+        self.start = QLineEdit(self)
+        self.end = QLineEdit(self)
+        if start:
+            self.start.setText(start)
+        if end:
+            self.end.setText(end)
+
+        layout = QGridLayout(self)
+        layout.addWidget(label_s, 0, 0)
+        layout.addWidget(label_e, 0, 1)
+        layout.addWidget(self.start, 1, 0)
+        layout.addWidget(self.end, 1, 1)
+        layout.addWidget(buttonBox, 2, 0, 2, 0)
 
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
     def getDate(self):
-        # return properly
-        return None, None
+        return self.start.text(), self.end.text()
 
 
 class SatelliteApp(QMainWindow, design.Ui_MainWindow):
@@ -106,7 +108,7 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         self.models.append((self.cloud, 'cloud'))
 
         # Map
-
+        # TODO make map able to use satellite vision
         self.view = QtWebEngineWidgets.QWebEngineView()
         self.channel = QtWebChannel.QWebChannel()
         self.channel.registerObject("SatelliteApp", self)
@@ -123,9 +125,6 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
 
         # Map Properties
 
-        self.preview = QLabel(self)
-        self.ispreview = False
-        self.button_preview.clicked.connect(self.preview_mode)
         self.button_mode.clicked.connect(self.mode)
         self.button_clear.clicked.connect(self.clear_marker)
 
@@ -160,35 +159,12 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         return ul, lr
 
     # Map Properties
-    # TODO finish preview_mode
-    def preview_mode(self):
-        if self.image is None:
-            return
-        if self.ispreview:
-            self.button_preview.setText('Preview mode')
-            # remove web channel from self.view.page() ?
-            # не работает так как надо, хмм...
-            self.gridLayout_2.removeWidget(self.view)
-            # работает только на тестовом изображении для fire detection!!!!!
-            convert = np.concatenate(
-                (self.image[:, :, 7:8], self.image[:, :, 6:7], self.image[:, :, 2:3]), axis=2)
-            convert = qimage2ndarray.array2qimage(convert)
-            self.preview.setPixmap(QtGui.QPixmap.fromImage(convert))
-            self.gridLayout_2.addWidget(self.preview)
-            self.ispreview = False
-        else:
-            self.button_preview.setText('Map mode')
-            self.gridLayout_2.removeWidget(self.preview)
-            # set web channel to self.view.page() ?
-
-            self.gridLayout_2.addWidget(self.view)
-            self.ispreview = True
 
     def mode(self):
         if self.online == True:
             self.online = False
             self.button_mode.setText("Online mode")
-            # TODO implement ofline mode
+            # TODO implement ofline mode: choosing images on computer
         else:
             self.online = True
             self.button_mode.setText("Offline mode")
@@ -219,7 +195,10 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
 
             # from landsat_downloader
             ul, lr = self.norm_markers(self.markers[0], self.markers[1])
-            bbox = (ul[0], ul[1], lr[0], lr[1])
+            bbox = (ul[1], ul[0], lr[1], lr[0])
+            print('Start searching')
+            # TODO if searching by bbox not successful try search by point
+            # in that case might need button to switch searching mode
             scenes = self.api.search(
                 dataset='landsat_8_c1',
                 bbox=bbox,
@@ -228,20 +207,29 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
                 max_cloud_cover=10,
                 max_results=1
             )
+            bbox = (ul[0], ul[1], lr[0], lr[1])
+            if len(scenes) == 0:
+                print('did not find images on coordinates ' + str(bbox) +
+                      ' for the time period ' + self.start_date + ' - ' + self.end_date)
+                return
             image = scenes[0]['display_id']
-            zip_path = os.path.abspath("")+'\\landsat_downloaded\\zips\\'
-            images_path = zip_path[:-5]
+            zip_path = os.path.abspath("") + '\\landsat_downloaded\\zips\\'
+            images_path = zip_path[:-5] + image
             try:
+                print('Start downloading')
                 self.ee.download(identifier=image,
                                  output_dir=zip_path, dataset='landsat_8_c1')
-                tar = tarfile.open(zip_path+image+'.tar.gz', 'r')
-                tar.extractall(path=images_path+image)
+                print('Start extracting')
+                tar = tarfile.open(zip_path + image + '.tar.gz', 'r')
+                tar.extractall(path=images_path)
             except EarthExplorerError as e:
                 print(e, end='')
                 print(' for ' + image + ' from dataset landsat_8_c1')
+                return
 
             # from cropper_demo
-            with open(images_path+image+'_MTL.txt', 'r') as f:
+            print('Start preprocessing')
+            with open(images_path + '\\' + image + '_MTL.txt', 'r') as f:
                 data = f.read().split('PRODUCT_METADATA')[1].split('\n')[14:22]
             meta = {}
             for info in data:
@@ -257,9 +245,11 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
 
             channels = []
             for i in range(10):
-                img = tiff.imread(images_path+image+'_B{}.TIF'.format(i+1))
+                img = tiff.imread(images_path + '\\' +
+                                  image + '_B{}.TIF'.format(i+1))
                 x_scale = abs(x2_l-x1_l)/img.shape[1]
                 y_scale = abs(y2_l-y1_l)/img.shape[0]
+                # TODO if bbox not fully inside image borders add if instead abs()
                 x1_b = abs(bbox[1]-x1_l)/x_scale
                 x2_b = abs(bbox[3]-x1_l)/x_scale
                 y1_b = abs(bbox[0]-y1_l)/y_scale
@@ -279,13 +269,17 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             # Костыль
             self.image = tiff.imread(
                 'C://Users//Никита//Desktop//fire//image.tif')
-
+        print('Start processing')
         i = 0
         for model in self.models:
             res = model[0].process(self.image)
             res = qimage2ndarray.array2qimage(res)
             self.labels[i].setPixmap(QtGui.QPixmap.fromImage(res))
             i += 1
+        # TODO remove if map can use satellite vision
+        cv.imshow('Image', cv.resize(np.concatenate(
+            (self.image[:, :, 7:8], self.image[:, :, 6:7], self.image[:, :, 2:3]), axis=2), (600, 600), interpolation=cv.INTER_AREA))
+        cv.waitKey(0)
 
     def save(self):
         i = 0
@@ -319,6 +313,9 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
                 self.ee = EarthExplorer(self.username, self.password)
             except Exception as e:
                 print(e)
+                self.username = ''
+                self.password = ''
+                return False
         return True
 
 
