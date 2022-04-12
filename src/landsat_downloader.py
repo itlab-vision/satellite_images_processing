@@ -89,12 +89,12 @@ def main():
 
     # Download scenes
     if download == True:
-        scenes_path = os.path.abspath("")+'\\landsat_downloaded\\zips\\'
+        scenes_path = os.path.join(os.path.join(os.path.abspath(""), 'landsat_downloaded'), 'zips')
         for scene in scenes:
             try:
                 ee.download(identifier=scene, output_dir=scenes_path, dataset='landsat_8_c1')
-                tar = tarfile.open(scenes_path+scene+'.tar.gz', 'r')
-                tar.extractall(path=scenes_path[:-5]+scene)
+                tar = tarfile.open(os.path.join(scenes_path, scene+'.tar.gz'), 'r')
+                tar.extractall(path=os.path.join(scenes_path[:-5], scene))
             except EarthExplorerError as e:
                 print(e, end='')
                 print(' for ' + scene + ' from dataset landsat_8_c1')
