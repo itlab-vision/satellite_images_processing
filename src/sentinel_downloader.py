@@ -74,9 +74,9 @@ def download(bbox, resolution, start, end, config, name = 'def'):
                     sample.B12];
         }
     """
-
+    data_folder = os.path.join(os.path.join(os.path.abspath(""), 'sentinel_downloaded'), name)
     request = SentinelHubRequest(
-        data_folder=os.path.join(os.path.join(os.path.abspath(""), 'sentinel_downloaded'), name),
+        data_folder=data_folder,
         evalscript=evalscript,
         input_data=[
             SentinelHubRequest.input_data(
@@ -93,7 +93,7 @@ def download(bbox, resolution, start, end, config, name = 'def'):
         config=config,
     )
     request.save_data()
-
+    return data_folder
     # Debug
     # import numpy as np
     # import matplotlib.pyplot as plt
