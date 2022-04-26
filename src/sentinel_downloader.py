@@ -1,7 +1,10 @@
 import os
 import sys
 import argparse
+from shapely.geometry import shape, Polygon, MultiPolygon, MultiLineString
+import numpy as np
 from sentinelhub import (
+    BBoxSplitter,
     SHConfig,
     MimeType,
     CRS,
@@ -9,6 +12,7 @@ from sentinelhub import (
     SentinelHubRequest,
     DataCollection,
     bbox_to_dimensions,
+    read_data
 )
 
 
@@ -22,40 +26,24 @@ def build_argparser():
                       help='Your sh_client_id from OAuth client profile on page https://apps.sentinel-hub.com/dashboard/#/account/settings.')
     args.add_argument('-s', '--secret', type=str, required=False,
                       help='Your sh_client_secret from OAuth client profile on page https://apps.sentinel-hub.com/dashboard/#/account/settings.')
-    args.add_argument('-b', '--bbox', type=str, required=True,
+    args.add_argument('-b', '--bbox', type=str, required=False,
                       help='Area to observe in format "x1 y1 x2 y2" where "x1" and "y1" - lower left longitude and lattitude, "x2" and "y2" - upper right longitude and lattitude')
+    args.add_argument('-lb', '--largebbox', type=str, required=False,
+                      help='Path to file with coordinates of area to observe')
     args.add_argument('-sd', '--start', type=str, required=True,
                       help='Start date in format YYYY-MM-DD.')
     args.add_argument('-e', '--end', type=str, required=True,
                       help='End date in format YYYY-MM-DD.')
     args.add_argument('-r', '--resolution', type=float, required=True,
                       help='Pixel resolution (in meters).')
+    args.add_argument('-n', '--name', type=str, required=False,
+                      help='Name of folder')
     return parser
 
+def download(bbox, resolution, start, end, config, name = 'def'):
+    size = bbox_to_dimensions(bbox, resolution=resolution)
 
-def main():
-
-    args = build_argparser().parse_args()
-
-    config = SHConfig()
-
-    if not args.id or not args.secret:
-        if not config.sh_client_id or not config.sh_client_secret:
-            print('Please configure your sh_client_id and sh_client_secret to enable downloading requests')
-            print('You can do this by editing config.json file of sentinelhub or by passing --id and --secret arguments just once')
-            return
-    else:
-        config.sh_client_id = args.id
-        config.sh_client_secret = args.secret
-        config.save()
-
-    bbox = args.bbox
-    bbox = bbox.split()
-    bbox = (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
-    bbox = BBox(bbox=bbox, crs=CRS.WGS84)
-    size = bbox_to_dimensions(bbox, resolution=args.resolution)
-
-    print(f"Image shape at {args.resolution} m resolution: {size} pixels")
+    print(f"Image shape at {resolution} m resolution: {size} pixels")
 
     evalscript = """
         //VERSION=3
@@ -86,15 +74,15 @@ def main():
                     sample.B12];
         }
     """
-
+    data_folder = os.path.join(os.path.join(os.path.abspath(""), 'sentinel_downloaded'), name)
     request = SentinelHubRequest(
-        data_folder=os.path.join(os.path.abspath(""), 'sentinel_downloaded'),
+        data_folder=data_folder,
         evalscript=evalscript,
         input_data=[
             SentinelHubRequest.input_data(
                 # TODO check others collections
                 data_collection=DataCollection.SENTINEL2_L1C,
-                time_interval=(args.start, args.end),
+                time_interval=(start, end),
                 mosaicking_order="leastCC",
             )
         ],
@@ -105,7 +93,7 @@ def main():
         config=config,
     )
     request.save_data()
-
+    return data_folder
     # Debug
     # import numpy as np
     # import matplotlib.pyplot as plt
@@ -114,6 +102,41 @@ def main():
     #     (img[:, :, 3:4]*3.5/255, img[:, :, 2:3]*3.5/255, img[:, :, 1:2]*3.5/255), axis=2))
     # plt.show()
 
+def main():
+
+    args = build_argparser().parse_args()
+
+    config = SHConfig()
+
+    if not args.id or not args.secret:
+        if not config.sh_client_id or not config.sh_client_secret:
+            print('Please configure your sh_client_id and sh_client_secret to enable downloading requests')
+            print('You can do this by editing config.json file of sentinelhub or by passing --id and --secret arguments just once')
+            return
+    else:
+        config.sh_client_id = args.id
+        config.sh_client_secret = args.secret
+        config.save()
+
+    if args.bbox:
+        bbox = args.bbox
+        bbox = bbox.split()
+        bbox = (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+        bbox = BBox(bbox=bbox, crs=CRS.WGS84)
+        download(bbox, args.resolution, args.start, args.end, config)
+        
+    else:
+        geo_json = read_data(args.largebbox)
+        area = shape(geo_json["features"][0]["geometry"])
+        bbox_splitter = BBoxSplitter(
+            [area], CRS.WGS84, (5, 4), reduce_bbox_sizes=True
+        )
+        bboxs = bbox_splitter.get_bbox_list()
+        for bbox in bboxs:
+            if (args.name):
+                download(bbox, args.resolution, args.start, args.end, config, args.name)
+            else:
+                download(bbox, args.resolution, args.start, args.end, config)
 
 if __name__ == '__main__':
     sys.exit(main() or 0)
