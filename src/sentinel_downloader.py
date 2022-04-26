@@ -36,9 +36,11 @@ def build_argparser():
                       help='End date in format YYYY-MM-DD.')
     args.add_argument('-r', '--resolution', type=float, required=True,
                       help='Pixel resolution (in meters).')
+    args.add_argument('-n', '--name', type=str, required=False,
+                      help='Name of folder')
     return parser
 
-def download(bbox, resolution, start, end, config):
+def download(bbox, resolution, start, end, config, name = 'def'):
     size = bbox_to_dimensions(bbox, resolution=resolution)
 
     print(f"Image shape at {resolution} m resolution: {size} pixels")
@@ -74,7 +76,7 @@ def download(bbox, resolution, start, end, config):
     """
 
     request = SentinelHubRequest(
-        data_folder=os.path.join(os.path.abspath(""), 'sentinel_downloaded'),
+        data_folder=os.path.join(os.path.join(os.path.abspath(""), 'sentinel_downloaded'), name),
         evalscript=evalscript,
         input_data=[
             SentinelHubRequest.input_data(
@@ -131,7 +133,10 @@ def main():
         )
         bboxs = bbox_splitter.get_bbox_list()
         for bbox in bboxs:
-            download(bbox, args.resolution, args.start, args.end, config)
+            if (args.name):
+                download(bbox, args.resolution, args.start, args.end, config, args.name)
+            else:
+                download(bbox, args.resolution, args.start, args.end, config)
 
 if __name__ == '__main__':
     sys.exit(main() or 0)
