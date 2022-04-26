@@ -1,13 +1,29 @@
+<!DOCTYPE html>
 <html>
+
   <head>
     <script defer src="../static/jquery-3.6.0.js"></script>
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
     <script type="text/javascript" src="../static/scripts.js"></script>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
     <title>Satellite Images Processing</title>
   </head>
-  <body>
-      <h1>План структуры</h1>
-      <p><img src = "../static/plan.png"> </p>
-      <p><button type="button" onclick="analyze('map.marker_1', 'map.marker_2', document.getElementById('date').value);">Analyze</button></p>
-      <p><input type="date" id="date" value= "{{today}}"></p>
+
+  <body onload="createMap()">
+    <div id="map" style="width:100%;height:720px;"></div>
+    <br>
+    <div id="map_buttons">
+      <button type="button" onclick="analyze(document.getElementById('date').value);"
+        style="width: 33%;height: 100px;">Analyze</button>
+      <input type="date" id="date" value="{{today}}" style="width: 33%;height: 100px;">
+      <button type="button" onclick="clearMarker();" style="width: 33%;height: 100px;">Clear Marker</button>
+    </div>
+    <br>
+    <div id="stat" style="flex-flow: column wrap; display:flex; height:600px;">
+      <img src="../static/result.png" style="height:600px;">
+      <img src="../static/stat_select.png" style="height:200px;">
+      <img src="../static/stat.png" style="height:400px;">
+    </div>
   </body>
+
 </html>
