@@ -13,7 +13,7 @@ def size_of_area(area):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Sentinel-2 downloader', add_help=False)
+        description='Size calculator', add_help=False)
     args = parser.add_argument_group('Options')
     args.add_argument('-a', '--area', type=str, required=True)
     geo_json = read_data(parser.parse_args().area)
