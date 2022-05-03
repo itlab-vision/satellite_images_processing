@@ -42,7 +42,7 @@ function clearMarker() {
     }
 }
 
-function analyze(date) {
+function analyze(start_date, end_date) {
     if (num != 2) {
         alert("Use 2 markers to define area to analyze")
     }
@@ -51,7 +51,7 @@ function analyze(date) {
             url: "/analyze/",
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({ 'marker_1': [marker_1.getLatLng().lat, marker_1.getLatLng().lng], 'marker_2': [marker_2.getLatLng().lat, marker_2.getLatLng().lng], 'date': date }),
+            data: JSON.stringify({ 'marker_1': [marker_1.getLatLng().lat, marker_1.getLatLng().lng], 'marker_2': [marker_2.getLatLng().lat, marker_2.getLatLng().lng], 'start_date': start_date, 'end_date': end_date }),
             success: function (data) {
                 // for debug
                 alert(data);
