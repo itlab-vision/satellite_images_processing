@@ -5,7 +5,7 @@ from datetime import date
 from sentinelhub import SHConfig
 from models.kumar_roy import KumarRoy64_10
 from models.cloud_net import CloudNet
-# from sentinel_downloader import download
+from sentinel_downloader import download
 import tifffile as tiff
 
 config = SHConfig()
@@ -30,7 +30,7 @@ def analyze():
     start_date = data['start_date']
     end_date = data['end_date']
     # download
-    # data_path = download(bbox=(marker_1[0], marker_1[1], marker_2[0], marker_2[1]), resolution=60, start=start_date, end=end_date)
+    data_path = download(bbox=(marker_1[0], marker_1[1], marker_2[0], marker_2[1]), resolution=60, start=start_date, end=end_date)
     # process
     image = tiff.imread(data_path + 'response.tiff')
     fire_res = fire.process(image)
