@@ -13,10 +13,13 @@ class KumarRoy64_10():
         self.model.load_weights(path)
         self.th_fire = th_fire
 
+    def get_type(self):
+        return 'fire'
+
     def preprocess(self, image):
         if image.shape[2] < 10:
             raise ValueError("num of image channels must be more than 9")
-        img = cv.resize(image, (256, 256), interpolation=cv.INTER_AREA)
+        img = cv.resize(image, (256, 256))
         img = img[:, :, 0:10]
         return img
 

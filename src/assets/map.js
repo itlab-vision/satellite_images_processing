@@ -19,7 +19,7 @@ function initialize() {
         SatelliteApp = channel.objects.SatelliteApp;
         if (typeof SatelliteApp != 'undefined') {
             var onMapClick = function (e) {
-                SatelliteApp.addMarker(e.latlng.lat, e.latlng.lng, function (pyval) {
+                SatelliteApp.addMarker(e.latlng.lng, e.latlng.lat, function (pyval) {
                     num = pyval;
                     if (num == 1) {
                         marker_1 = L.marker(e.latlng).addTo(map);
