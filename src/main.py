@@ -242,7 +242,7 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             i += 1
         # TODO remove if map can use satellite vision or display on gui
         cv.imshow('Image', cv.resize(np.concatenate(
-            (self.image[:, :, 7:8], self.image[:, :, 6:7], self.image[:, :, 2:3]), axis=2), (600, 600), interpolation=cv.INTER_AREA))
+            (self.image[:, :, 3:4], self.image[:, :, 2:3], self.image[:, :, 1:2]), axis=2), (600, 600), interpolation=cv.INTER_AREA))
         cv.waitKey(0)
 
     def save(self):
