@@ -5,23 +5,27 @@ from keras.models import *
 from keras.layers import *
 
 
-class KumarRoy64_10():
+class KumarRoy64_762():
 
     def __init__(self, path, th_fire=0.25):
         self.model = self.get_model(
-            input_height=256, input_width=256, n_filters=64, n_channels=10)
+            input_height=256, input_width=256, n_filters=64, n_channels=3)
         self.model.load_weights(path)
         self.th_fire = th_fire
 
+    def get_type(self):
+        return 'fire'
+
     def preprocess(self, image):
-        if image.shape[2] < 10:
-            raise ValueError("num of image channels must be more than 9")
-        img = cv.resize(image, (256, 256), interpolation=cv.INTER_AREA)
-        img = img[:, :, 0:10]
+        if image.shape[2] < 13:
+            raise ValueError("there must be at least 13 channels in sentinel image")
+        img = cv.resize(image, (256, 256))
+        img = np.concatenate(
+            (img[:, :, 12:13], img[:, :, 11:12], img[:, :, 1:2]), axis=2)
         return img
 
     def process(self, image):
-        # Input: numpy array (image) of shape (256, 256, 10) width x height x channels
+        # Model Input: numpy array (image) of shape (256, 256, 3) width x height x channels
         if isinstance(image, list):
             res = []
             for img in image:
@@ -38,7 +42,7 @@ class KumarRoy64_10():
         else:
             raise ValueError(
                 "image must be a numpy array or list of numpy arrays")
-        # Output: numpy array (mask) of shape (256, 256) width x height
+        # Model Output: numpy array (mask) of shape (256, 256) width x height
         return res
 
     def conv2d_block(self, input_tensor, n_filters, kernel_size=3, batchnorm=True):
@@ -57,7 +61,7 @@ class KumarRoy64_10():
         x = Activation("relu")(x)
         return x
 
-    def get_unet(self, nClasses, input_height=256, input_width=256, n_filters=16, dropout=0.1, batchnorm=True, n_channels=10):
+    def get_unet(self, nClasses, input_height=256, input_width=256, n_filters=16, dropout=0.1, batchnorm=True, n_channels=3):
         input_img = Input(shape=(input_height, input_width, n_channels))
 
         # contracting path
@@ -117,7 +121,7 @@ class KumarRoy64_10():
         model = Model(inputs=[input_img], outputs=[outputs])
         return model
 
-    def get_model(self, nClasses=1, input_height=128, input_width=128, n_filters=16, dropout=0.1, batchnorm=True, n_channels=10):
+    def get_model(self, nClasses=1, input_height=128, input_width=128, n_filters=16, dropout=0.1, batchnorm=True, n_channels=3):
         model = self.get_unet
 
         return model(

@@ -3,7 +3,7 @@ import rasterio
 import numpy as np
 import cv2 as cv
 
-from models.kumar_roy import KumarRoy64_10
+from models.kumar_roy import KumarRoy64_762
 from matplotlib import pyplot as plt
 
 # read and preprocess dataset && download model (костыль)
@@ -16,7 +16,7 @@ image = np.float32(image)/MAX_PIXEL_VALUE
 model_path = os.path.abspath('') + '/model.h5'
 
 # init && process
-model = KumarRoy64_10(model_path)
+model = KumarRoy64_762(model_path)
 result = model.process(image)
 
 # visualise (костыль)

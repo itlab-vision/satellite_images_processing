@@ -12,10 +12,13 @@ class CloudNet():
             input_rows=384, input_cols=384, num_of_channels=4, num_of_classes=1)
         self.model.load_weights(path)
 
+    def get_type(self):
+        return 'cloud'
+
     def preprocess(self, image):
         if image.shape[2] < 4:
-            raise ValueError("num of image channels must be more than 3")
-        img = cv.resize(image, (384, 384), interpolation=cv.INTER_AREA)
+            raise ValueError("there must be at least 4 channels in sentinel image")
+        img = cv.resize(image, (384, 384))
         if image.shape[2] > 4:
             img = np.concatenate(
                 (img[:, :, 3:4], img[:, :, 2:3], img[:, :, 1:2], img[:, :, 4:5]), axis=2)

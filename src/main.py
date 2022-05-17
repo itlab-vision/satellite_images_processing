@@ -9,41 +9,42 @@ import tifffile as tiff
 import numpy as np
 import cv2 as cv
 
+from sentinel_downloader import download
+from models.kumar_roy import KumarRoy64_762
+from models.cloud_net import CloudNet
+from sentinelhub import SHConfig, BBox, CRS
+
 from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWebChannel
 from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QLabel, QFormLayout, QGridLayout, QMainWindow, QMessageBox, QApplication
-from landsatxplore.api import API
-from landsatxplore.errors import EarthExplorerError
-from landsatxplore.earthexplorer import EarthExplorer
-from models.kumar_roy import KumarRoy64_10
-from models.cloud_net import CloudNet
 
+config = SHConfig()
 
 class SignIn(QDialog):
     def __init__(self):
         super(SignIn, self).__init__()
 
-        self.login = QLineEdit(self)
-        self.password = QLineEdit(self)
+        self.id = QLineEdit(self)
+        self.secret = QLineEdit(self)
         self.resize(660, 100)
-        self.setWindowTitle('Authorization')
+        self.setWindowTitle('Authorization to Sentinel Hub')
 
         buttonBox = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
         label = QLabel(self)
         label.setText(
-            "To use this application in online mode please enter yours login and password from earth explorer https://ers.cr.usgs.gov")
+            "To use this application in online mode please enter yours sh_client_id and sh_client_secret from https://www.sentinel-hub.com/")
 
         layout = QFormLayout(self)
         layout.addWidget(label)
-        layout.addRow("Login", self.login)
-        layout.addRow("Password", self.password)
+        layout.addRow("sh_client_id", self.id)
+        layout.addRow("sh_client_secret", self.secret)
         layout.addWidget(buttonBox)
 
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getLP(self):
-        return self.login.text(), self.password.text()
+    def getIS(self):
+        return self.id.text(), self.secret.text()
 
 
 class Date(QDialog):
@@ -78,13 +79,34 @@ class Date(QDialog):
     def getDate(self):
         return self.start.text(), self.end.text()
 
+class Resolution(QDialog):
+    def __init__(self):
+        super(Resolution, self).__init__()
+        self.setWindowTitle('Resolution')
+        buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+
+        label_r = QLabel(self)
+        label_r.setText('Type resolution of image to download (how many meters does 1 pixel of image match)')
+
+        self.res = QLineEdit(self)
+        self.res.setText('60')
+
+        layout = QGridLayout(self)
+        layout.addWidget(label_r, 0, 0)
+        layout.addWidget(self.res, 1, 0)
+        layout.addWidget(buttonBox, 2, 0, 2, 0)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def getRes(self):
+        return self.res.text()
+
 
 class SatelliteApp(QMainWindow, design.Ui_MainWindow):
-    api = None
-    ee = None
-    # from earth explorer site https://ers.cr.usgs.gov
-    username = ''
-    password = ''
+    sh_client_id = ''
+    sh_client_secret = ''
     start_date = None
     end_date = None
     image = None
@@ -98,17 +120,18 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         self.setupUi(self)
 
         # Models initialize
+        # TODO use openvino
         # Костыль
-        self.fire = KumarRoy64_10('C://Users//Никита//Desktop//fire//model.h5')
+        self.fire = KumarRoy64_762('C://Users//Никита//Desktop//fire//model.h5')
         self.cloud = CloudNet('C://Users//Никита//Desktop//cloud//model.h5')
 
-        # TODO relocate short names "fire" & "cloud" to a model classes as methods like CloudNet.get_type()
-        # and with that, fix self.save() method
-        self.models.append((self.fire, 'fire'))
-        self.models.append((self.cloud, 'cloud'))
+        self.models.append(self.fire)
+        self.models.append(self.cloud)
 
         # Map
-        # TODO make map able to use satellite vision
+        # TODO May be it's better to make map able to use satellite vision
+        # it can be done only with google map + openstreent map feature
+        # see https://stackoverflow.com/questions/50672846/how-to-load-a-google-maps-baselayer-in-leaflet-after-june-2018
         self.view = QtWebEngineWidgets.QWebEngineView()
         self.channel = QtWebChannel.QWebChannel()
         self.channel.registerObject("SatelliteApp", self)
@@ -146,17 +169,18 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
     # Map
 
     @QtCore.pyqtSlot(float, float, result=int)
-    def addMarker(self, lat, lng):
+    def addMarker(self, lng, lat):
         if self.num_markers == 2:
             return 0
         self.num_markers += 1
-        self.markers[self.num_markers-1] = (lat, lng)
+        self.markers[self.num_markers-1] = (lng, lat)
         return self.num_markers
 
     def norm_markers(self, x, y):
-        ul = (min(x[0], y[0]), min(x[1], y[1]))
-        lr = (max(x[0], y[0]), max(x[1], y[1]))
-        return ul, lr
+        # 0 - longitude, 1 - lattitude
+        ll = (min(x[0], y[0]), min(x[1], y[1]))
+        ur = (max(x[0], y[0]), max(x[1], y[1]))
+        return ll, ur
 
     # Map Properties
 
@@ -193,99 +217,41 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             self.date.exec_()
             self.start_date, self.end_date = self.date.getDate()
 
-            # from landsat_downloader
-            ul, lr = self.norm_markers(self.markers[0], self.markers[1])
-            bbox = (ul[1], ul[0], lr[1], lr[0])
-            print('Start searching')
-            # TODO if searching by bbox not successful try search by point
-            # in that case might need button to switch searching mode
-            scenes = self.api.search(
-                dataset='landsat_8_c1',
-                bbox=bbox,
-                start_date=self.start_date,
-                end_date=self.end_date,
-                max_cloud_cover=10,
-                max_results=1
-            )
-            bbox = (ul[0], ul[1], lr[0], lr[1])
-            if len(scenes) == 0:
-                print('did not find images on coordinates ' + str(bbox) +
-                      ' for the time period ' + self.start_date + ' - ' + self.end_date)
-                return
-            image = scenes[0]['display_id']
-            zip_path = os.path.abspath("") + '\\landsat_downloaded\\zips\\'
-            images_path = zip_path[:-5] + image
-            try:
-                print('Start downloading')
-                self.ee.download(identifier=image,
-                                 output_dir=zip_path, dataset='landsat_8_c1')
-                print('Start extracting')
-                tar = tarfile.open(zip_path + image + '.tar.gz', 'r')
-                tar.extractall(path=images_path)
-            except EarthExplorerError as e:
-                print(e, end='')
-                print(' for ' + image + ' from dataset landsat_8_c1')
-                return
-
-            # from cropper_demo
-            print('Start preprocessing')
-            with open(images_path + '\\' + image + '_MTL.txt', 'r') as f:
-                data = f.read().split('PRODUCT_METADATA')[1].split('\n')[14:22]
-            meta = {}
-            for info in data:
-                meta[info.split('=')[0][4:-1]] = float(info.split('=')[1][1:])
-
-            # lattitude = y, longitude = x on image
-            ul = (meta['CORNER_UL_LON_PRODUCT'], meta['CORNER_UL_LAT_PRODUCT'])
-            ur = (meta['CORNER_UR_LON_PRODUCT'], meta['CORNER_UR_LAT_PRODUCT'])
-            ll = (meta['CORNER_LL_LON_PRODUCT'], meta['CORNER_LL_LAT_PRODUCT'])
-            lr = (meta['CORNER_LR_LON_PRODUCT'], meta['CORNER_LR_LAT_PRODUCT'])
-            x1_l, y1_l = ll[0], ul[1]
-            x2_l, y2_l = ur[0], lr[1]
-
-            channels = []
-            for i in range(10):
-                img = tiff.imread(images_path + '\\' +
-                                  image + '_B{}.TIF'.format(i+1))
-                x_scale = abs(x2_l-x1_l)/img.shape[1]
-                y_scale = abs(y2_l-y1_l)/img.shape[0]
-                # TODO if bbox not fully inside image borders add if instead abs()
-                x1_b = abs(bbox[1]-x1_l)/x_scale
-                x2_b = abs(bbox[3]-x1_l)/x_scale
-                y1_b = abs(bbox[0]-y1_l)/y_scale
-                y2_b = abs(bbox[2]-y1_l)/y_scale
-                x1_b, x2_b = math.floor(
-                    min(x1_b, x2_b)), math.ceil(max(x1_b, x2_b))
-                y1_b, y2_b = math.floor(
-                    min(y1_b, y2_b)), math.ceil(max(y1_b, y2_b))
-                if i == 0:
-                    size = (x2_b-x1_b, y2_b-y1_b)
-                channels.append(cv.resize(
-                    img[y1_b:y2_b+1, x1_b:x2_b+1], size, interpolation=cv.INTER_AREA))
-
-            self.image = np.stack((channels[0], channels[1], channels[2], channels[3], channels[4],
-                                   channels[5], channels[6], channels[7], channels[8], channels[9]), axis=-1)
+            ll, ur = self.norm_markers(self.markers[0], self.markers[1])
+            bbox = (ll[0], ll[1], ur[0], ur[1])
+            bbox = BBox(bbox=bbox, crs=CRS.WGS84)
+            self.res = Resolution()
+            self.res.exec_()
+            resolution = int(self.res.getRes())
+            print('Start downloading')
+            image_path = download(bbox, resolution, self.start_date, self.end_date, config)
+            self.image = tiff.imread(image_path)
         else:
+            # TODO implement ofline mode: choosing images on computer
             # Костыль
             self.image = tiff.imread(
                 'C://Users//Никита//Desktop//fire//image.tif')
         print('Start processing')
+        # TODO handle downloading pieces of choosen area
         i = 0
         for model in self.models:
-            res = model[0].process(self.image)
+            res = model.process(self.image)
             res = qimage2ndarray.array2qimage(res)
             self.labels[i].setPixmap(QtGui.QPixmap.fromImage(res))
             i += 1
-        # TODO remove if map can use satellite vision
+        # TODO remove if map can use satellite vision or display on gui
+        # TODO find better scaling factor do display as RGB
+        # see https://sentinelhub-py.readthedocs.io/en/latest/examples/process_request.html
+        scale = 1
         cv.imshow('Image', cv.resize(np.concatenate(
-            (self.image[:, :, 7:8], self.image[:, :, 6:7], self.image[:, :, 2:3]), axis=2), (600, 600), interpolation=cv.INTER_AREA))
+            (self.image[:, :, 3:4]*scale, self.image[:, :, 2:3]*scale, self.image[:, :, 1:2]*scale), axis=2), (600, 600)))
         cv.waitKey(0)
 
     def save(self):
         i = 0
         for label in self.labels:
             img = qimage2ndarray.rgb_view(label.pixmap().toImage())
-            cv.imwrite('res_{}_model_{}.png'.format(self.models[i][1], self.runs),
+            cv.imwrite('res_{}_model_{}.png'.format(self.models[i].get_type(), self.runs),
                        cv.cvtColor(img, cv.COLOR_RGB2BGR))
             i += 1
         self.runs += 1
@@ -303,19 +269,14 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
     # Sign in
 
     def authorize(self):
-        if self.username == '' or self.password == '':
+        if not config.sh_client_id or not config.sh_client_secret:
             self.sign_in.exec_()
-            self.username, self.password = self.sign_in.getLP()
-            if self.username == '' or self.password == '':
+            self.sh_client_id, self.sh_client_secret = self.sign_in.getIS()
+            if not self.sh_client_id or not self.sh_client_secret:
                 return False
-            try:
-                self.api = API(self.username, self.password)
-                self.ee = EarthExplorer(self.username, self.password)
-            except Exception as e:
-                print(e)
-                self.username = ''
-                self.password = ''
-                return False
+            config.sh_client_id = self.sh_client_id
+            config.sh_client_secret = self.sh_client_secret
+            config.save()
         return True
 
 

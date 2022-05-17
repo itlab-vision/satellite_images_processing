@@ -40,7 +40,7 @@ def build_argparser():
                       help='Name of folder')
     return parser
 
-def download(bbox, resolution, start, end, config, name = 'def'):
+def download(bbox, resolution, start, end, config, name = None):
     size = bbox_to_dimensions(bbox, resolution=resolution)
 
     print(f"Image shape at {resolution} m resolution: {size} pixels")
@@ -54,6 +54,7 @@ def download(bbox, resolution, start, end, config, name = 'def'):
                 }],
                 output: {
                     bands: 13,
+                    sampleType: "FLOAT32"
                 }
             };
         }
@@ -74,7 +75,10 @@ def download(bbox, resolution, start, end, config, name = 'def'):
                     sample.B12];
         }
     """
-    data_folder = os.path.join(os.path.join(os.path.abspath(""), 'sentinel_downloaded'), name)
+    if name:
+        data_folder = os.path.join(os.path.join(os.path.abspath(""), 'sentinel_downloaded'), name)
+    else:
+        data_folder = os.path.join(os.path.abspath(""), 'sentinel_downloaded')
     request = SentinelHubRequest(
         data_folder=data_folder,
         evalscript=evalscript,
@@ -93,7 +97,7 @@ def download(bbox, resolution, start, end, config, name = 'def'):
         config=config,
     )
     request.save_data()
-    return data_folder
+    return os.path.join(data_folder, request.get_filename_list()[0])
     # Debug
     # import numpy as np
     # import matplotlib.pyplot as plt
