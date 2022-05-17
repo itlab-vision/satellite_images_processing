@@ -10,7 +10,7 @@ import numpy as np
 import cv2 as cv
 
 from sentinel_downloader import download
-from models.kumar_roy import KumarRoy64_10
+from models.kumar_roy import KumarRoy64_762
 from models.cloud_net import CloudNet
 from sentinelhub import SHConfig, BBox, CRS
 
@@ -122,7 +122,7 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         # Models initialize
         # TODO use openvino
         # Костыль
-        self.fire = KumarRoy64_10('C://Users//Никита//Desktop//fire//model.h5')
+        self.fire = KumarRoy64_762('C://Users//Никита//Desktop//fire//model.h5')
         self.cloud = CloudNet('C://Users//Никита//Desktop//cloud//model.h5')
 
         self.models.append(self.fire)
@@ -231,7 +231,6 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             # Костыль
             self.image = tiff.imread(
                 'C://Users//Никита//Desktop//fire//image.tif')
-        print(self.image.shape)
         print('Start processing')
         # TODO handle downloading pieces of choosen area
         i = 0
@@ -241,8 +240,11 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             self.labels[i].setPixmap(QtGui.QPixmap.fromImage(res))
             i += 1
         # TODO remove if map can use satellite vision or display on gui
+        # TODO find better scaling factor do display as RGB
+        # see https://sentinelhub-py.readthedocs.io/en/latest/examples/process_request.html
+        scale = 1
         cv.imshow('Image', cv.resize(np.concatenate(
-            (self.image[:, :, 3:4], self.image[:, :, 2:3], self.image[:, :, 1:2]), axis=2), (600, 600), interpolation=cv.INTER_AREA))
+            (self.image[:, :, 3:4]*scale, self.image[:, :, 2:3]*scale, self.image[:, :, 1:2]*scale), axis=2), (600, 600)))
         cv.waitKey(0)
 
     def save(self):
