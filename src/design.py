@@ -127,7 +127,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "Satellite images processing"))
         self.groupBox_map.setTitle(_translate("MainWindow", "     Map     "))
         self.groupBox_properties.setTitle(_translate("MainWindow", "Map Properties"))
-        self.button_mode.setText(_translate("MainWindow", "Offline mode"))
+        self.button_mode.setText(_translate("MainWindow", "Switch to offline mode"))
         self.button_clear.setText(_translate("MainWindow", "Clear marker"))
         self.groupBox_results.setTitle(_translate("MainWindow", "Results of models"))
         self.groupBox_buttons.setTitle(_translate("MainWindow", "Buttons"))

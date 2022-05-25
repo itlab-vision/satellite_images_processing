@@ -20,11 +20,15 @@ from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QLabel, QFormL
 config = SHConfig()
 
 class SignIn(QDialog):
-    def __init__(self):
+    def __init__(self, id, secret):
         super(SignIn, self).__init__()
 
         self.id = QLineEdit(self)
         self.secret = QLineEdit(self)
+        if id:
+            self.id.setText(id)
+        if secret:
+            self.secret.setText(secret)
         self.resize(660, 100)
         self.setWindowTitle('Authorization to Sentinel Hub')
 
@@ -162,10 +166,6 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         self.labels.append(self.label_fire)
         self.labels.append(self.label_cloud)
 
-        # Sign in
-
-        self.sign_in = SignIn()
-
     # Map
 
     @QtCore.pyqtSlot(float, float, result=int)
@@ -187,11 +187,10 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
     def mode(self):
         if self.online == True:
             self.online = False
-            self.button_mode.setText("Online mode")
-            # TODO implement ofline mode: choosing images on computer
+            self.button_mode.setText("Switch to online mode")
         else:
             self.online = True
-            self.button_mode.setText("Offline mode")
+            self.button_mode.setText("Switch to offline mode")
 
     def clear_marker(self):
         if self.num_markers == 2:
@@ -210,29 +209,39 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
             if self.num_markers != 2:
                 self.view.page().runJavaScript("alert_markers();")
                 return
-            result = self.authorize()
-            if result == False:
-                return
-            self.date = Date(self.start_date, self.end_date)
-            self.date.exec_()
-            self.start_date, self.end_date = self.date.getDate()
-
             ll, ur = self.norm_markers(self.markers[0], self.markers[1])
             bbox = (ll[0], ll[1], ur[0], ur[1])
             bbox = BBox(bbox=bbox, crs=CRS.WGS84)
+
+            if not self.authorize():
+                self.info("You didn't provide a sh_client_id and sh_client_secret")
+                return
+
+            self.date = Date(self.start_date, self.end_date)
+            self.date.exec_()
+            self.start_date, self.end_date = self.date.getDate()
+            if not (self.start_date and self.end_date):
+                self.info("You didn't provide a time period")
+                return
+
             self.res = Resolution()
             self.res.exec_()
-            resolution = int(self.res.getRes())
+            res = self.res.getRes()
+            if res:
+                resolution = int(res)
+            else:
+                self.info("You didn't provide a resolution")
+                return
+
             print('Start downloading')
+            # TODO catch rejecting of args dialogs
             image_path = download(bbox, resolution, self.start_date, self.end_date, config)
             self.image = tiff.imread(image_path)
         else:
             # TODO implement ofline mode: choosing images on computer
-            # Костыль
-            self.image = tiff.imread(
-                'C://Users//Никита//Desktop//fire//image.tif')
+            self.info('Offline mode is not implemented yet')
+            return
         print('Start processing')
-        # TODO handle downloading pieces of choosen area
         i = 0
         for model in self.models:
             res = model.process(self.image)
@@ -266,18 +275,22 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
                 self.api.logout()
             self.close()
 
-    # Sign in
-
     def authorize(self):
-        if not config.sh_client_id or not config.sh_client_secret:
-            self.sign_in.exec_()
-            self.sh_client_id, self.sh_client_secret = self.sign_in.getIS()
-            if not self.sh_client_id or not self.sh_client_secret:
-                return False
-            config.sh_client_id = self.sh_client_id
-            config.sh_client_secret = self.sh_client_secret
-            config.save()
+        self.sign_in = SignIn(config.sh_client_id, config.sh_client_secret)
+        self.sign_in.exec_()
+        self.sh_client_id, self.sh_client_secret = self.sign_in.getIS()
+        if not self.sh_client_id or not self.sh_client_secret:
+            return False
+        config.sh_client_id = self.sh_client_id
+        config.sh_client_secret = self.sh_client_secret
+        config.save()
         return True
+
+    def info(self, text):
+        info = QMessageBox(self)
+        info.setText(text)
+        info.setStandardButtons(QMessageBox.Ok)
+        info.exec_()
 
 
 def main():
