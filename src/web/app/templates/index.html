@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script defer src="../static/jquery-3.6.0.js"></script>
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+  <!--Check latest version may be -->
+  <script type="text/javascript" src="../static/scripts.js"></script>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+  <!--Check latest version may be -->
+  <title>Satellite Images Processing</title>
+</head>
+
+<body onload="createMap()">
+  <div id="map" style="width:100%;height:720px;"></div>
+  <br>
+  <div id="map_buttons">
+    <button type="button"
+      onclick="analyze(document.getElementById('start_date').value, document.getElementById('end_date').value);"
+      style="width: 25%;height: 100px;">Analyze</button>
+    <label for="start_date">Start date</label>
+    <input type="date" id="start_date" value="{{today}}" style="width: 20%;height: 100px;">
+    <label for="end_date">End date</label>
+    <input type="date" id="end_date" value="{{today}}" style="width: 20%;height: 100px;">
+    <button type="button" onclick="clearMarker();" style="width: 25%;height: 100px;">Clear Marker</button>
+  </div>
+  <br>
+  <img id="res">
+  <br>
+  <div>
+    <img id="fire">
+    <img id="cloud">
+  </div>
+  <br>
+  <img src="../static/stat_select.png">
+  <!--<select>selector for statistic from database</select>-->
+  <img src="../static/stat.png">
+  <!--<some visualizer>statistic</some visualizer> -->
+</body>
+
+</html>
