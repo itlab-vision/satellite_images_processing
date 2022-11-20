@@ -127,7 +127,6 @@ class SatelliteApp(QMainWindow, design.Ui_MainWindow):
         # TODO use openvino
         # Костыль
         self.fire = KumarRoy64_762('.//Keras//fire//unet_64f_2conv_762//model_unet_Kumar-Roy_final_weights.h5')
-#       self.fire = KumarRoy64_762('C://Users//ermol//Desktop//satellite_images_processing-main//src//Keras//fire//unet_64f_2conv_762//model_unet_Kumar-Roy_final_weights.h5')
         self.cloud = CloudNet('.//Keras//cloud//model.h5')
 
         self.models.append(self.fire)
