@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 Keras/
+sentinel_downloaded/
 # C extensions
 *.so
 
