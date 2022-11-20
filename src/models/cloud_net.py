@@ -16,12 +16,12 @@ class CloudNet():
         return 'cloud'
 
     def preprocess(self, image):
-        if image.shape[2] < 4:
-            raise ValueError("there must be at least 4 channels in sentinel image")
+        if image.shape[2] < 9:
+            raise ValueError("there must be at least 9 channels in sentinel image")
         img = cv.resize(image, (384, 384))
-        if image.shape[2] > 4:
+        if image.shape[2] > 9:
             img = np.concatenate(
-                (img[:, :, 3:4], img[:, :, 2:3], img[:, :, 1:2], img[:, :, 4:5]), axis=2)
+                (img[:, :, 3:4], img[:, :, 2:3], img[:, :, 1:2], img[:, :, 8:9]), axis=2)
         return img
 
     def process(self, image):
